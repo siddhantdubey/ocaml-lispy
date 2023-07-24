@@ -83,11 +83,15 @@ let initial_env () =
     in
     [
         builtin "+" (function
-            | [Atom (Number a); Atom (Number b)] -> Atom (Number (a +. b))
+            | Atom (Number a) :: tl -> 
+                let numbers = List.map (function Atom (Number n) -> n | _ -> failwith "Type error") tl in
+                Atom (Number (a +. List.fold_left (+.) 0. numbers))
             | _ -> failwith "Type error"
         );
         builtin "-" (function
-            | [Atom (Number a); Atom (Number b)] -> Atom (Number (a -. b))
+            | Atom (Number a) :: tl ->
+                let numbers = List.map (function Atom (Number n) -> n | _ -> failwith "Type error") tl in
+                Atom (Number (a -. List.fold_left (+.) 0. numbers))
             | _ -> failwith "Type error"
         );
         builtin "*" (function
@@ -151,6 +155,8 @@ let test_evaluator () =
         "(< 2 1)";
         "(>= 2 2)";
         "(<= 2 2)";
+        "(- 7 2 2)";
+        "(+ 7 2 2)"
     ] in
     List.iter (fun test ->
         print_endline ("\nEvaluating: " ^ test);
