@@ -81,6 +81,7 @@ let extend env symbol value =
 let initial_env () =
     let builtin name f = (name, Fun f)
     in
+    ("nil", List [])  ::
     [
         builtin "+" (function
             | Atom (Number a) :: tl -> 
@@ -122,6 +123,18 @@ let initial_env () =
             | [Atom (Number a); Atom (Number b)] -> Atom (Symbol (string_of_bool (a <= b)))
             | _ -> failwith "Type error"
         );
+        builtin "car" (function
+            | [List (h :: _)] -> h
+            | _ -> failwith "Type error"
+        );
+        builtin "cdr" (function
+            | [List (_ :: tl)] -> List tl
+            | _ -> failwith "Type error"
+        );
+        builtin "cons" (function
+            | [h; List tl] -> List (h :: tl)
+            | _ -> failwith "Type error"
+        );
     ]
 
 let rec eval env = function
@@ -136,34 +149,29 @@ and apply func args =
     | Fun f -> f args
     | _ -> failwith "Not a function"
 
-let string_of_expr = function
+let rec string_of_expr = function
     | Atom (Number n) -> string_of_float n
     | Atom (Symbol s) -> s
     | Atom (String s) -> "\"" ^ s ^ "\""
-    | List _ -> failwith "Cannot convert complex expression to string"
+    | List exprs -> "(" ^ String.concat " " (List.map string_of_expr exprs) ^ ")"
     | _ -> failwith "Invalid expression"
 
 let test_evaluator () =
     let env = initial_env () in
-    let test_cases = [
-        "(+ 1 2)";
-        "(- 5 3)";
-        "(* 2 2)";
-        "(/ 10 2)";
-        "(eq 2 2)";
-        "(> 2 1)";
-        "(< 2 1)";
-        "(>= 2 2)";
-        "(<= 2 2)";
-        "(- 7 2 2)";
-        "(+ 7 2 2)"
-    ] in
-    List.iter (fun test ->
-        print_endline ("\nEvaluating: " ^ test);
-        match parse_expr (tokenize test) with
-        | (expr, []) -> print_endline (string_of_expr (eval env expr))
-        | _ -> failwith "Invalid expression"
-    ) test_cases
+    let test s =
+        let tokens = tokenize s in
+        let (expr, _) = parse_expr tokens in
+        let result = eval env expr in
+        Printf.printf "Result: %s\n" (string_of_expr result)
+    in
+    test "(+ 1 2 3)";
+    test "(- 10 3 2)";
+    test "(* 5 5)";
+    test "(/ 10 2)";
+    test "(eq 1 1)";
+    test "(car (cons 1 (cons 2 (cons 3 nil))))";
+    test "(cdr (cons 1 (cons 2 (cons 3 nil))))";
+    test "(cons 1 (cons 2 (cons 3 nil)))"
 
-let () =
-    test_evaluator ()
+let () = test_evaluator ()
+
